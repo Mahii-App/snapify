@@ -1,0 +1,232 @@
+openapi: 3.0.0
+info:
+  title: Snapify API
+  version: 1.0.0
+  description: A RESTful image-sharing backend using Node.js, PostgreSQL, and Cloudinary.
+servers:
+  - url: http://localhost:5000/api/v1
+tags:
+  - name: Auth
+    description: Authentication APIs
+  - name: Photos
+    description: Photo operations
+  - name: Admin
+    description: Admin-only routes
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        201:
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/User'
+        400:
+          description: Validation error
+        409:
+          description: User already exists
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: Login successful, returns JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+        401:
+          description: Invalid credentials
+  /photos/upload:
+    post:
+      tags: [Photos]
+      summary: Upload a photo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        201:
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  photo:
+                    $ref: '#/components/schemas/Photo'
+        400:
+          description: Invalid input
+        401:
+          description: Unauthorized
+  /photos:
+    get:
+      tags: [Photos]
+      summary: Get all uploaded photos
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: List of all photos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  photos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Photo'
+        401:
+          description: Unauthorized
+  /photos/{id}:
+    get:
+      tags: [Photos]
+      summary: Get a photo by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Photo details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  photo:
+                    $ref: '#/components/schemas/Photo'
+        404:
+          description: Photo not found
+        401:
+          description: Unauthorized
+    delete:
+      tags: [Photos]
+      summary: Delete a photo by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Photo deleted
+        404:
+          description: Photo not found
+        401:
+          description: Unauthorized
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get system statistics
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Admin dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+        403:
+          description: Forbidden (non-admin access)
+        401:
+          description: Unauthorized
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Photo:
+      type: object
+      properties:
+        id:
+          type: integer
+        imageUrl:
+          type: string
+        userId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
